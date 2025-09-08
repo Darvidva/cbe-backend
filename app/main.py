@@ -44,7 +44,6 @@ async def root():
 
 @app.on_event("startup")
 async def on_startup():
-    print("🔗 Connected to database:", settings.DATABASE_URL)
     # create tables
     Base.metadata.create_all(bind=engine)
     # seed admin
