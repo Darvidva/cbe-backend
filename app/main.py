@@ -13,7 +13,6 @@ app = FastAPI(title="CBE Backend")
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     print(f"Global exception handler caught: {exc}")
-    print("🔗 Connected to database:", settings.DATABASE_URL)
     print("Traceback:")
     traceback.print_exc()
     return JSONResponse(
