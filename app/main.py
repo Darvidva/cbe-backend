@@ -8,7 +8,7 @@ from app.db.seed import seed_admin
 from app.api.v1.routes import auth, subjects, questions, exams, results
 import traceback
 
-app = FastAPI(title="CBE Backend")
+app = FastAPI(title="CBE Backend", docs_url="/docs", redoc_url="/redoc")
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):

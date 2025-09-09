@@ -24,6 +24,7 @@ class SubmitIn(BaseModel):
     answers: List[AnswerIn]
 
 class ResultOut(BaseModel):
+    id: int
     score: int
     total: int
     percentage: float
@@ -40,6 +41,10 @@ def grade_from_percentage(p: float) -> tuple[str, str]:
 
 @router.post("/start/{subject_id}", response_model=StartExamResponse, dependencies=[Depends(require_student)])
 def start_exam(subject_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    # Prevent retake if result already exists for this student and subject
+    existing = db.query(Result).filter(Result.student_id == user.id, Result.subject_id == subject_id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="You have already completed this exam")
     # Get all questions for this subject
     questions = db.query(Question).filter(Question.subject_id == subject_id).all()
     if not questions:
@@ -104,4 +109,5 @@ def submit_exam(payload: SubmitIn, db: Session = Depends(get_db), user: User = D
     )
     db.add(res)
     db.commit()
-    return ResultOut(score=score, total=total, percentage=percentage, grade=grade, status=status)
+    db.refresh(res)  # Refresh to get the ID
+    return ResultOut(id=res.id, score=score, total=total, percentage=percentage, grade=grade, status=status)
