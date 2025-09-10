@@ -37,11 +37,32 @@ class QuestionOut(BaseModel):
     class Config:
         from_attributes = True
 
+# @router.post("/{subject_id}", response_model=QuestionOut, dependencies=[Depends(require_admin)])
+# def add_question(subject_id: int, data: QuestionIn, db: Session = Depends(get_db)):
+#     if not db.get(Subject, subject_id):
+#         raise HTTPException(status_code=404, detail="Subject not found")
+    
+#     # Convert correct_option to string value
+#     question_data = data.dict()
+#     question_data['correct_option'] = question_data['correct_option'].value
+    
+#     q = Question(subject_id=subject_id, **question_data)
+#     db.add(q)
+#     db.commit()
+#     db.refresh(q)
+#     return q
+
 @router.post("/{subject_id}", response_model=QuestionOut, dependencies=[Depends(require_admin)])
 def add_question(subject_id: int, data: QuestionIn, db: Session = Depends(get_db)):
-    if not db.get(Subject, subject_id):
+    subject = db.get(Subject, subject_id)
+    if not subject:
         raise HTTPException(status_code=404, detail="Subject not found")
-    
+
+    # Count existing questions for this subject
+    question_count = db.query(Question).filter(Question.subject_id == subject_id).count()
+    if subject.totalQuestions is not None and question_count >= subject.totalQuestions:
+        raise HTTPException(status_code=400, detail="Maximum number of questions reached for this subject")
+
     # Convert correct_option to string value
     question_data = data.dict()
     question_data['correct_option'] = question_data['correct_option'].value
@@ -51,6 +72,7 @@ def add_question(subject_id: int, data: QuestionIn, db: Session = Depends(get_db
     db.commit()
     db.refresh(q)
     return q
+
 
 @router.get("/{subject_id}", response_model=list[QuestionOut])
 def list_questions(subject_id: int, db: Session = Depends(get_db)):

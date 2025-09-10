@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from sqlalchemy.orm import Session
 from app.core.deps import get_db, require_student, get_current_user
 from app.db.models.question import Question
@@ -17,7 +17,7 @@ class StartExamResponse(BaseModel):
 
 class AnswerIn(BaseModel):
     question_id: int
-    selected_option: str  # "A" | "B" | "C" | "D"
+    selected_option: Optional[str] = None  # "A" | "B" | "C" | "D"
 
 class SubmitIn(BaseModel):
     subject_id: int
@@ -83,17 +83,16 @@ def submit_exam(payload: SubmitIn, db: Session = Depends(get_db), user: User = D
     )
     if not questions:
         raise HTTPException(status_code=404, detail="No questions for this subject")
-    
-    # Force evaluation of all attributes to get plain Python objects
+
+    submitted_answers = {a.question_id: a.selected_option for a in payload.answers}
+
     total = len(questions)
     score = 0
 
     for question in questions:
-        # Find matching answer for this question
-        for answer in payload.answers:
-            if answer.question_id == question.id and answer.selected_option == question.correct_option:
-                score += 1
-                break
+        selected = submitted_answers.get(question.id)  # None if unanswered
+        if selected and selected == question.correct_option:
+            score += 1
     
     percentage = (score / total * 100) if total else 0.0
     grade, status = grade_from_percentage(percentage)
